@@ -383,11 +383,27 @@ textarea { resize: vertical; min-height: 72px; }
       <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
         <input type="checkbox" id="filter-all" checked onchange="setFilterAll(this.checked)" style="accent-color:var(--accent);"> すべて
       </label>
-      ${['使用中','試合用','試用','未使用','修理依頼中','修理完了','引退'].map(st => `
-        <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
-          <input type="checkbox" class="filter-cb" value="${st}" checked onchange="applyFilter()" style="accent-color:var(--accent);"> ${st}
-        </label>
-      `).join('')}
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+        <input type="checkbox" class="filter-cb" value="使用中" checked onchange="applyFilter()" style="accent-color:var(--accent);"> 使用中
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+        <input type="checkbox" class="filter-cb" value="試合用" checked onchange="applyFilter()" style="accent-color:var(--accent);"> 試合用
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+        <input type="checkbox" class="filter-cb" value="試用" checked onchange="applyFilter()" style="accent-color:var(--accent);"> 試用
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+        <input type="checkbox" class="filter-cb" value="未使用" checked onchange="applyFilter()" style="accent-color:var(--accent);"> 未使用
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+        <input type="checkbox" class="filter-cb" value="修理依頼中" checked onchange="applyFilter()" style="accent-color:var(--accent);"> 修理依頼中
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+        <input type="checkbox" class="filter-cb" value="修理完了" checked onchange="applyFilter()" style="accent-color:var(--accent);"> 修理完了
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+        <input type="checkbox" class="filter-cb" value="引退" checked onchange="applyFilter()" style="accent-color:var(--accent);"> 引退
+      </label>
     </div>
   </div>
   <div id="shinai-list"></div>
