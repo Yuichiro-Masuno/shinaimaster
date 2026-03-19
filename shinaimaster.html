@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>shinaimaster</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+
+:root {
+  --ink: #1a1a2e;
+  --ink-light: #4a4a6a;
+  --paper: #f5f0e8;
+  --paper-dark: #ede5d0;
+  --accent: #2d5a3d;
+  --accent-light: #3d7a55;
+  --gold: #c9a84c;
+  --border: #d4c5a9;
+  --white: #fdfaf5;
+  --shadow: rgba(26,26,46,0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overflow-x: hidden; max-width: 100vw; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+header {
+  background: var(--ink);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px var(--shadow);
+}
+header h1 {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+header span { font-size: 0.75rem; color: var(--border); }
+
+.tabs {
+  display: flex;
+  background: var(--ink);
+  border-top: 1px solid #2a2a4e;
+}
+.tab {
+  flex: 1;
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--border);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab.active { color: var(--gold); border-bottom: 2px solid var(--gold); }
+
+main { padding: 16px; max-width: 640px; margin: 0 auto; }
+
+.view { display: none; }
+.view.active { display: block; }
+
+.card {
+  background: var(--white);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px var(--shadow);
+}
+.card-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  letter-spacing: 0.08em;
+}
+
+label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-light);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+input[type="text"], input[type="date"], input[type="number"],
+select, textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 0.85rem;
+  background: var(--white);
+  color: var(--ink);
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+textarea { resize: vertical; min-height: 72px; }
+
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; }
+
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.row3 > * { }
+
+/* Status badge */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.status-使用中 { background: #e8f0e8; color: #2d6a2d; border: 1px solid #a8c8a8; }
+.status-試合用 { background: #fff0d0; color: #8b6000; border: 1px solid #d4a840; }
+.status-試用 { background: #e8eef8; color: #2d4a8b; border: 1px solid #a8b8d8; }
+.status-未使用 { background: var(--paper-dark); color: var(--ink-light); border: 1px solid var(--border); }
+.status-修理依頼中 { background: #fef0e8; color: #8b3a1a; border: 1px solid #d4a898; }
+.status-修理完了 { background: #f0e8fe; color: #4a1a8b; border: 1px solid #b898d4; }
+.status-引退 { background: #e8e8e8; color: #666; border: 1px solid #ccc; }
+
+/* Shinai list */
+.shinai-item {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+.shinai-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+.shinai-id {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.shinai-meta { font-size: 0.78rem; color: var(--ink-light); margin-bottom: 6px; }
+.shinai-tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--ink-light);
+  font-size: 0.85rem;
+}
+.empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+/* Detail specs */
+.spec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.spec-item {
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+}
+.spec-label { font-size: 0.65rem; color: var(--ink-light); margin-bottom: 2px; }
+.spec-value { font-size: 0.85rem; font-weight: 500; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,26,46,0.55);
+  z-index: 150;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  width: 100%;
+  max-width: 640px;
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--ink-light);
+}
+.d-label { font-size: 0.7rem; color: var(--ink-light); margin-bottom: 2px; font-weight: 500; }
+.d-value { font-size: 0.85rem; margin-bottom: 10px; }
+.d-section {
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+.d-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+.btn-submit:hover { background: var(--accent-light); }
+
+.btn-remove {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--ink-light);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+.btn-remove:hover { border-color: #8b1a1a; color: #8b1a1a; }
+
+.btn-add {
+  width: 100%;
+  padding: 9px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--ink-light);
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+}
+.btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Confirm */
+.confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,26,46,0.55);
+  z-index: 400;
+  align-items: center;
+  justify-content: center;
+}
+.confirm-overlay.open { display: flex; }
+.confirm-dialog {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 24px 20px 16px;
+  width: 280px;
+  box-shadow: 0 8px 32px var(--shadow);
+}
+.confirm-msg { font-size: 0.88rem; color: var(--ink); line-height: 1.6; margin-bottom: 18px; text-align: center; }
+.confirm-btns { display: flex; gap: 8px; }
+.confirm-cancel {
+  flex: 1; padding: 10px; background: none;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-family: 'Noto Sans JP', sans-serif; font-size: 0.85rem;
+  color: var(--ink-light); cursor: pointer;
+}
+.confirm-ok {
+  flex: 1; padding: 10px; background: #8b1a1a;
+  border: none; border-radius: 6px;
+  font-family: 'Noto Sans JP', sans-serif; font-size: 0.85rem;
+  color: var(--white); cursor: pointer;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ink);
+  color: var(--gold);
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 0.82rem;
+  font-family: 'Noto Serif JP', serif;
+  z-index: 300;
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Filter pills */
+.filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.filter-pill {
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  color: var(--ink-light);
+  transition: all 0.15s;
+}
+.filter-pill.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--gold);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>竹刀帳</h1>
+  <span>shinaimaster</span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('list')">⚔️ 竹刀一覧</div>
+  <div class="tab" onclick="switchTab('new')">＋ 登録する</div>
+</div>
+
+<main>
+
+<!-- ─── LIST ─── -->
+<div id="view-list" class="view active">
+  <div class="filter-pills" id="filter-pills">
+    <div class="filter-pill active" onclick="setFilter('')">すべて</div>
+    <div class="filter-pill" onclick="setFilter('使用中')">使用中</div>
+    <div class="filter-pill" onclick="setFilter('試合用')">試合用</div>
+    <div class="filter-pill" onclick="setFilter('試用')">試用</div>
+    <div class="filter-pill" onclick="setFilter('未使用')">未使用</div>
+    <div class="filter-pill" onclick="setFilter('修理依頼中')">修理依頼中</div>
+    <div class="filter-pill" onclick="setFilter('修理完了')">修理完了</div>
+    <div class="filter-pill" onclick="setFilter('引退')">引退</div>
+  </div>
+  <div id="shinai-list"></div>
+</div>
+
+<!-- ─── NEW/EDIT FORM ─── -->
+<div id="view-new" class="view">
+
+  <!-- 基本情報 -->
+  <div class="card">
+    <div class="card-title" id="form-title">⚔️ 基本情報</div>
+
+    <div class="row">
+      <div>
+        <label>竹刀ID <span style="color:#c0392b;font-size:0.7rem;">※必須</span></label>
+        <input type="text" id="f-id" placeholder="例：25 一">
+      </div>
+      <div>
+        <label>ステータス</label>
+        <select id="f-status">
+          <option value="未使用">未使用</option>
+          <option value="使用中">使用中</option>
+          <option value="試用">試用</option>
+          <option value="試合用">試合用</option>
+          <option value="修理依頼中">修理依頼中</option>
+          <option value="修理完了">修理完了</option>
+          <option value="引退">引退</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>銘柄</label>
+        <input type="text" id="f-meigara" placeholder="例：水空">
+      </div>
+      <div>
+        <label>長さ</label>
+        <select id="f-length">
+          <option value="">選択</option>
+          <option value="39">39（3尺9寸）</option>
+          <option value="38">38（3尺8寸）</option>
+          <option value="37">37（3尺7寸）</option>
+          <option value="36">36（3尺6寸）</option>
+          <option value="30">30（木刀）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>握形</label>
+        <input type="text" id="f-nigiri" placeholder="例：木刀・正八角形">
+      </div>
+      <div>
+        <label>柄革番号</label>
+        <input type="text" id="f-tsuka-kawa-no" placeholder="例：十二">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>初回購入日</label>
+        <input type="date" id="f-purchase-date">
+      </div>
+      <div>
+        <label>稽古投入日</label>
+        <input type="date" id="f-keiko-start">
+      </div>
+    </div>
+
+    <label>稽古引上日</label>
+    <input type="date" id="f-keiko-end">
+  </div>
+
+  <!-- 寸法 -->
+  <div class="card">
+    <div class="card-title">📏 寸法・重量</div>
+
+    <label>各部寸法（mm）</label>
+    <div class="row3" style="margin-bottom:10px;">
+      <div><label style="font-size:0.68rem;">先</label><input type="number" id="f-saki" placeholder="例：73" style="margin-bottom:0;"></div>
+      <div><label style="font-size:0.68rem;">中結</label><input type="number" id="f-nakayui" placeholder="例：90" style="margin-bottom:0;"></div>
+      <div><label style="font-size:0.68rem;">胴</label><input type="number" id="f-do" placeholder="例：137" style="margin-bottom:0;"></div>
+    </div>
+    <div class="row" style="margin-bottom:10px;">
+      <div><label style="font-size:0.68rem;">右手</label><input type="number" id="f-migi" placeholder="例：96" style="margin-bottom:0;"></div>
+      <div><label style="font-size:0.68rem;">左手</label><input type="number" id="f-hidari" placeholder="例：85" style="margin-bottom:0;"></div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>重量 竹のみ（g）</label>
+        <input type="number" id="f-weight-take" placeholder="例：445">
+      </div>
+      <div>
+        <label>重量 仕組み後（g）</label>
+        <input type="number" id="f-weight-after" placeholder="例：492">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>先節</label>
+        <input type="text" id="f-saki-setsu" placeholder="例：26.5">
+      </div>
+      <div>
+        <label>胴節</label>
+        <input type="text" id="f-do-setsu" placeholder="例：40.5">
+      </div>
+      <div>
+        <label>五の節</label>
+        <input type="text" id="f-go-setsu" placeholder="例：なし">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>柄の長さ</label>
+        <input type="text" id="f-tsuka-length" placeholder="例：31(37の4L)">
+      </div>
+      <div>
+        <label>重心</label>
+        <input type="text" id="f-jyushin" placeholder="例：53.3">
+      </div>
+    </div>
+  </div>
+
+  <!-- 革 -->
+  <div class="card">
+    <div class="card-title">🔍 革・竹頭</div>
+    <div class="row">
+      <div>
+        <label>柄革長さ</label>
+        <input type="text" id="f-tsuka-kawa-length" placeholder="例：31">
+      </div>
+      <div>
+        <label>先革長（cm）</label>
+        <input type="text" id="f-saki-kawa-length" placeholder="例：5.9">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>先革計測（mm）</label>
+        <input type="text" id="f-saki-kawa-sokutei" placeholder="例：27.7">
+      </div>
+      <div>
+        <label>竹頭（チクトウ）</label>
+        <input type="text" id="f-chikuto" placeholder="例：24.1/23.6">
+      </div>
+    </div>
+  </div>
+
+  <!-- メモ -->
+  <div class="card">
+    <div class="card-title">📝 メモ・感想</div>
+    <label>備考・メモ</label>
+    <textarea id="f-memo" placeholder="購入時のメモなど"></textarea>
+    <label>稽古後感想</label>
+    <textarea id="f-kansou" placeholder="実際に使ってみた感想"></textarea>
+  </div>
+
+  <button class="btn-submit" id="btn-submit" onclick="saveShinai()">竹刀を登録する</button>
+  <button class="btn-add" id="btn-back" style="display:none;margin-top:8px;" onclick="switchTab('list')">← 一覧に戻る</button>
+</div>
+
+</main>
+
+<!-- ─── DETAIL MODAL ─── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- ─── CONFIRM ─── -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-dialog">
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" id="confirm-cancel">キャンセル</button>
+      <button class="confirm-ok" id="confirm-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── SUPABASE ───
+const SUPABASE_URL = 'https://hnkncnqktdftxuupvypp.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhua25jbnFrdGRmdHh1dXB2eXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjI3MTAsImV4cCI6MjA4OTI5ODcxMH0.QX75EilYZ2oj-IcUgxJniIrxhZHV3nhGI14fq-sS0F8';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE ───
+let shinais = [];
+let currentFilter = '';
+let editingId = null;
+
+// ─── INIT ───
+async function init() {
+  await syncFromSupabase();
+}
+
+async function syncFromSupabase() {
+  try {
+    showToast('同期中…');
+    const { data, error } = await sb.from('shinai_master').select('*').order('id');
+    if (error) throw error;
+    shinais = data || [];
+    renderList();
+    showToast('同期完了');
+  } catch(e) {
+    showToast('オフラインモード');
+  }
+}
+
+// ─── TABS ───
+function switchTab(tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  document.querySelectorAll('.tab')[['list','new'].indexOf(tab)].classList.add('active');
+  if (tab === 'new') resetForm();
+}
+
+// ─── FILTER ───
+function setFilter(status) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  renderList();
+}
+
+// ─── LIST ───
+function renderList() {
+  const container = document.getElementById('shinai-list');
+  const filtered = currentFilter ? shinais.filter(s => s.status === currentFilter) : shinais;
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚔️</div><p>竹刀が登録されていません<br>「登録する」から追加してください</p></div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(s => `
+    <div class="shinai-item" onclick="showDetail('${s.id}')">
+      <div class="shinai-id">${s.id}</div>
+      <div class="shinai-meta">${s.meigara || '銘柄未設定'}　${s.length ? s.length + '寸' : ''}　${s.weight_after ? s.weight_after + 'g' : ''}</div>
+      <div class="shinai-tags">
+        <span class="status-badge status-${s.status || '未使用'}">${s.status || '未使用'}</span>
+        ${s.purchase_date ? `<span style="font-size:0.68rem;color:var(--ink-light);margin-left:6px;">購入：${s.purchase_date}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── DETAIL ───
+function showDetail(id) {
+  const s = shinais.find(s => s.id === id);
+  if (!s) return;
+
+  const v = (val) => val || 'ー';
+
+  let html = `
+  <div class="modal-header">
+    <div class="modal-title">${s.id}</div>
+    <button class="btn-close" onclick="closeModal()">×</button>
+  </div>
+
+  <div style="margin-bottom:12px;">
+    <span class="status-badge status-${s.status || '未使用'}">${s.status || '未使用'}</span>
+  </div>
+
+  <div class="d-section">
+    <div class="d-section-title">基本情報</div>
+    <div class="spec-grid">
+      <div class="spec-item"><div class="spec-label">銘柄</div><div class="spec-value">${v(s.meigara)}</div></div>
+      <div class="spec-item"><div class="spec-label">長さ</div><div class="spec-value">${v(s.length)}</div></div>
+      <div class="spec-item"><div class="spec-label">握形</div><div class="spec-value">${v(s.nigiri_kata)}</div></div>
+      <div class="spec-item"><div class="spec-label">柄革番号</div><div class="spec-value">${v(s.tsuka_kawa_no)}</div></div>
+      <div class="spec-item"><div class="spec-label">初回購入日</div><div class="spec-value">${v(s.purchase_date)}</div></div>
+      <div class="spec-item"><div class="spec-label">稽古投入日</div><div class="spec-value">${v(s.keiko_start_date)}</div></div>
+      <div class="spec-item"><div class="spec-label">稽古引上日</div><div class="spec-value">${v(s.keiko_end_date)}</div></div>
+    </div>
+  </div>
+
+  <div class="d-section">
+    <div class="d-section-title">寸法・重量</div>
+    <div class="spec-grid">
+      <div class="spec-item"><div class="spec-label">先</div><div class="spec-value">${v(s.saki)}</div></div>
+      <div class="spec-item"><div class="spec-label">中結</div><div class="spec-value">${v(s.nakayui)}</div></div>
+      <div class="spec-item"><div class="spec-label">胴</div><div class="spec-value">${v(s.do_)}</div></div>
+      <div class="spec-item"><div class="spec-label">右手</div><div class="spec-value">${v(s.migi_te)}</div></div>
+      <div class="spec-item"><div class="spec-label">左手</div><div class="spec-value">${v(s.hidari_te)}</div></div>
+      <div class="spec-item"><div class="spec-label">重量（竹）</div><div class="spec-value">${s.weight_take ? s.weight_take + 'g' : 'ー'}</div></div>
+      <div class="spec-item"><div class="spec-label">重量（仕組）</div><div class="spec-value">${s.weight_after ? s.weight_after + 'g' : 'ー'}</div></div>
+      <div class="spec-item"><div class="spec-label">先節</div><div class="spec-value">${v(s.saki_setsu)}</div></div>
+      <div class="spec-item"><div class="spec-label">胴節</div><div class="spec-value">${v(s.do_setsu)}</div></div>
+      <div class="spec-item"><div class="spec-label">五の節</div><div class="spec-value">${v(s.go_no_setsu)}</div></div>
+      <div class="spec-item"><div class="spec-label">柄の長さ</div><div class="spec-value">${v(s.tsuka_length)}</div></div>
+      <div class="spec-item"><div class="spec-label">重心</div><div class="spec-value">${v(s.jyushin)}</div></div>
+    </div>
+  </div>
+
+  <div class="d-section">
+    <div class="d-section-title">革・竹頭</div>
+    <div class="spec-grid">
+      <div class="spec-item"><div class="spec-label">柄革長さ</div><div class="spec-value">${v(s.tsuka_kawa_length)}</div></div>
+      <div class="spec-item"><div class="spec-label">先革長</div><div class="spec-value">${s.saki_kawa_length ? s.saki_kawa_length + 'cm' : 'ー'}</div></div>
+      <div class="spec-item"><div class="spec-label">先革計測</div><div class="spec-value">${s.saki_kawa_sokutei ? s.saki_kawa_sokutei + 'mm' : 'ー'}</div></div>
+      <div class="spec-item"><div class="spec-label">竹頭</div><div class="spec-value">${v(s.chikuto)}</div></div>
+    </div>
+  </div>
+
+  ${s.memo ? `<div class="d-section"><div class="d-section-title">備考・メモ</div><div style="font-size:0.85rem;line-height:1.6;">${s.memo}</div></div>` : ''}
+  ${s.keiko_kansou ? `<div class="d-section"><div class="d-section-title">稽古後感想</div><div style="font-size:0.85rem;line-height:1.6;">${s.keiko_kansou}</div></div>` : ''}
+
+  <button class="btn-submit" style="margin-top:12px;" onclick="editShinai('${s.id}')">この竹刀を編集する</button>
+  <button class="btn-remove" style="margin-top:8px;width:100%;padding:8px;" onclick="showConfirm('この竹刀を削除しますか？',()=>deleteShinai('${s.id}'))">この竹刀を削除</button>
+  <button class="btn-add" style="margin-top:8px;" onclick="closeModal()">← 一覧に戻る</button>`;
+
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+// ─── EDIT ───
+function editShinai(id) {
+  const s = shinais.find(s => s.id === id);
+  if (!s) return;
+  closeModal();
+  editingId = id;
+
+  document.getElementById('form-title').textContent = '⚔️ 竹刀を編集する';
+  document.getElementById('btn-submit').textContent = '竹刀を更新する';
+  document.getElementById('btn-back').style.display = 'block';
+
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-new').classList.add('active');
+  document.querySelectorAll('.tab')[1].classList.add('active');
+
+  document.getElementById('f-id').value = s.id || '';
+  document.getElementById('f-id').disabled = true;
+  document.getElementById('f-status').value = s.status || '未使用';
+  document.getElementById('f-meigara').value = s.meigara || '';
+  document.getElementById('f-length').value = s.length || '';
+  document.getElementById('f-nigiri').value = s.nigiri_kata || '';
+  document.getElementById('f-tsuka-kawa-no').value = s.tsuka_kawa_no || '';
+  document.getElementById('f-purchase-date').value = s.purchase_date || '';
+  document.getElementById('f-keiko-start').value = s.keiko_start_date || '';
+  document.getElementById('f-keiko-end').value = s.keiko_end_date || '';
+  document.getElementById('f-saki').value = s.saki || '';
+  document.getElementById('f-nakayui').value = s.nakayui || '';
+  document.getElementById('f-do').value = s.do_ || '';
+  document.getElementById('f-migi').value = s.migi_te || '';
+  document.getElementById('f-hidari').value = s.hidari_te || '';
+  document.getElementById('f-weight-take').value = s.weight_take || '';
+  document.getElementById('f-weight-after').value = s.weight_after || '';
+  document.getElementById('f-saki-setsu').value = s.saki_setsu || '';
+  document.getElementById('f-do-setsu').value = s.do_setsu || '';
+  document.getElementById('f-go-setsu').value = s.go_no_setsu || '';
+  document.getElementById('f-tsuka-length').value = s.tsuka_length || '';
+  document.getElementById('f-jyushin').value = s.jyushin || '';
+  document.getElementById('f-tsuka-kawa-length').value = s.tsuka_kawa_length || '';
+  document.getElementById('f-saki-kawa-length').value = s.saki_kawa_length || '';
+  document.getElementById('f-saki-kawa-sokutei').value = s.saki_kawa_sokutei || '';
+  document.getElementById('f-chikuto').value = s.chikuto || '';
+  document.getElementById('f-memo').value = s.memo || '';
+  document.getElementById('f-kansou').value = s.keiko_kansou || '';
+}
+
+// ─── SAVE ───
+async function saveShinai() {
+  const id = document.getElementById('f-id').value.trim();
+  if (!id) { showToast('竹刀IDを入力してください'); return; }
+
+  const entry = {
+    id,
+    status: document.getElementById('f-status').value,
+    meigara: document.getElementById('f-meigara').value || null,
+    length: document.getElementById('f-length').value || null,
+    nigiri_kata: document.getElementById('f-nigiri').value || null,
+    tsuka_kawa_no: document.getElementById('f-tsuka-kawa-no').value || null,
+    purchase_date: document.getElementById('f-purchase-date').value || null,
+    keiko_start_date: document.getElementById('f-keiko-start').value || null,
+    keiko_end_date: document.getElementById('f-keiko-end').value || null,
+    saki: parseInt(document.getElementById('f-saki').value) || null,
+    nakayui: parseInt(document.getElementById('f-nakayui').value) || null,
+    do_: parseInt(document.getElementById('f-do').value) || null,
+    migi_te: parseInt(document.getElementById('f-migi').value) || null,
+    hidari_te: parseInt(document.getElementById('f-hidari').value) || null,
+    weight_take: parseInt(document.getElementById('f-weight-take').value) || null,
+    weight_after: parseInt(document.getElementById('f-weight-after').value) || null,
+    saki_setsu: parseFloat(document.getElementById('f-saki-setsu').value) || null,
+    do_setsu: parseFloat(document.getElementById('f-do-setsu').value) || null,
+    go_no_setsu: document.getElementById('f-go-setsu').value || null,
+    tsuka_length: document.getElementById('f-tsuka-length').value || null,
+    jyushin: parseFloat(document.getElementById('f-jyushin').value) || null,
+    tsuka_kawa_length: document.getElementById('f-tsuka-kawa-length').value || null,
+    saki_kawa_length: document.getElementById('f-saki-kawa-length').value || null,
+    saki_kawa_sokutei: document.getElementById('f-saki-kawa-sokutei').value || null,
+    chikuto: document.getElementById('f-chikuto').value || null,
+    memo: document.getElementById('f-memo').value || null,
+    keiko_kansou: document.getElementById('f-kansou').value || null,
+  };
+
+  try {
+    const { error } = await sb.from('shinai_master').upsert(entry);
+    if (error) { alert('保存エラー：' + error.message); return; }
+
+    if (editingId) {
+      const idx = shinais.findIndex(s => s.id === editingId);
+      if (idx !== -1) shinais[idx] = entry;
+      showToast('竹刀を更新しました');
+    } else {
+      shinais.unshift(entry);
+      showToast('竹刀を登録しました');
+    }
+    renderList();
+    switchTab('list');
+  } catch(e) {
+    alert('エラー：' + e.message);
+  }
+}
+
+// ─── DELETE ───
+async function deleteShinai(id) {
+  try {
+    const { error } = await sb.from('shinai_master').delete().eq('id', id);
+    if (error) { alert('削除エラー：' + error.message); return; }
+    shinais = shinais.filter(s => s.id !== id);
+    renderList();
+    closeModal();
+    showToast('竹刀を削除しました');
+  } catch(e) {
+    alert('エラー：' + e.message);
+  }
+}
+
+// ─── RESET ───
+function resetForm() {
+  editingId = null;
+  document.getElementById('f-id').disabled = false;
+  document.getElementById('f-id').value = '';
+  document.getElementById('f-status').value = '未使用';
+  document.getElementById('f-meigara').value = '';
+  document.getElementById('f-length').value = '';
+  document.getElementById('f-nigiri').value = '';
+  document.getElementById('f-tsuka-kawa-no').value = '';
+  document.getElementById('f-purchase-date').value = '';
+  document.getElementById('f-keiko-start').value = '';
+  document.getElementById('f-keiko-end').value = '';
+  ['f-saki','f-nakayui','f-do','f-migi','f-hidari',
+   'f-weight-take','f-weight-after','f-saki-setsu','f-do-setsu',
+   'f-go-setsu','f-tsuka-length','f-jyushin','f-tsuka-kawa-length',
+   'f-saki-kawa-length','f-saki-kawa-sokutei','f-chikuto',
+   'f-memo','f-kansou'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('form-title').textContent = '⚔️ 基本情報';
+  document.getElementById('btn-submit').textContent = '竹刀を登録する';
+  document.getElementById('btn-back').style.display = 'none';
+}
+
+// ─── MODAL ───
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+}
+
+// ─── CONFIRM ───
+function showConfirm(msg, onOk) {
+  const overlay = document.getElementById('confirm-overlay');
+  document.getElementById('confirm-msg').textContent = msg;
+  overlay.classList.add('open');
+  document.getElementById('confirm-ok').onclick = () => { overlay.classList.remove('open'); onOk(); };
+  document.getElementById('confirm-cancel').onclick = () => overlay.classList.remove('open');
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+(async () => { await init(); })();
+</script>
+</body>
+</html>
