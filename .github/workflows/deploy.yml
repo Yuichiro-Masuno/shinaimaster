@@ -1,0 +1,22 @@
+name: Deploy shinaimaster
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Inject Supabase Key
+        run: |
+          sed -i "s|ここにanon_keyを貼り付けてください|${{ secrets.SUPABASE_KEY }}|g" shinaimaster.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
