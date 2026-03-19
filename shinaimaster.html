@@ -377,15 +377,18 @@ textarea { resize: vertical; min-height: 72px; }
 
 <!-- ─── LIST ─── -->
 <div id="view-list" class="view active">
-  <div class="filter-pills" id="filter-pills">
-    <div class="filter-pill active" onclick="setFilter('')">すべて</div>
-    <div class="filter-pill" onclick="setFilter('使用中')">使用中</div>
-    <div class="filter-pill" onclick="setFilter('試合用')">試合用</div>
-    <div class="filter-pill" onclick="setFilter('試用')">試用</div>
-    <div class="filter-pill" onclick="setFilter('未使用')">未使用</div>
-    <div class="filter-pill" onclick="setFilter('修理依頼中')">修理依頼中</div>
-    <div class="filter-pill" onclick="setFilter('修理完了')">修理完了</div>
-    <div class="filter-pill" onclick="setFilter('引退')">引退</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;">
+    <div style="font-size:0.72rem;color:var(--ink-light);margin-bottom:8px;">表示するステータス</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+        <input type="checkbox" id="filter-all" checked onchange="setFilterAll(this.checked)" style="accent-color:var(--accent);"> すべて
+      </label>
+      ${['使用中','試合用','試用','未使用','修理依頼中','修理完了','引退'].map(st => `
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;cursor:pointer;">
+          <input type="checkbox" class="filter-cb" value="${st}" checked onchange="applyFilter()" style="accent-color:var(--accent);"> ${st}
+        </label>
+      `).join('')}
+    </div>
   </div>
   <div id="shinai-list"></div>
 </div>
@@ -580,7 +583,6 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── STATE ───
 let shinais = [];
-let currentFilter = '';
 let editingId = null;
 
 // ─── INIT ───
@@ -611,17 +613,49 @@ function switchTab(tab) {
 }
 
 // ─── FILTER ───
-function setFilter(status) {
-  currentFilter = status;
-  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-  event.target.classList.add('active');
+let activeFilters = new Set(['使用中','試合用','試用','未使用','修理依頼中','修理完了','引退']);
+
+function setFilterAll(checked) {
+  document.querySelectorAll('.filter-cb').forEach(cb => {
+    cb.checked = checked;
+    if (checked) activeFilters.add(cb.value);
+    else activeFilters.delete(cb.value);
+  });
   renderList();
+}
+
+function applyFilter() {
+  activeFilters = new Set();
+  document.querySelectorAll('.filter-cb').forEach(cb => {
+    if (cb.checked) activeFilters.add(cb.value);
+  });
+  // すべてチェックされているか確認してfilter-allを更新
+  const allChecked = document.querySelectorAll('.filter-cb').length === activeFilters.size;
+  const allCb = document.getElementById('filter-all');
+  if (allCb) allCb.checked = allChecked;
+  renderList();
+}
+
+// ─── TOGGLE FLAG ───
+async function toggleFlag(id, field, value) {
+  const s = shinais.find(s => s.id === id);
+  if (!s) return;
+  s[field] = value;
+  try {
+    const update = {};
+    update[field] = value;
+    const { error } = await sb.from('shinai_master').update(update).eq('id', id);
+    if (error) { alert('更新エラー：' + error.message); return; }
+    showToast(value ? 'チェックしました' : 'チェックを外しました');
+  } catch(e) {
+    alert('エラー：' + e.message);
+  }
 }
 
 // ─── LIST ───
 function renderList() {
   const container = document.getElementById('shinai-list');
-  const filtered = currentFilter ? shinais.filter(s => s.status === currentFilter) : shinais;
+  const filtered = shinais.filter(s => activeFilters.has(s.status || '未使用'));
 
   if (!filtered.length) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚔️</div><p>竹刀が登録されていません<br>「登録する」から追加してください</p></div>`;
@@ -629,12 +663,28 @@ function renderList() {
   }
 
   container.innerHTML = filtered.map(s => `
-    <div class="shinai-item" onclick="showDetail('${s.id}')">
-      <div class="shinai-id">${s.id}</div>
-      <div class="shinai-meta">${s.meigara || '銘柄未設定'}　${s.length ? s.length + '寸' : ''}　${s.weight_after ? s.weight_after + 'g' : ''}</div>
-      <div class="shinai-tags">
-        <span class="status-badge status-${s.status || '未使用'}">${s.status || '未使用'}</span>
-        ${s.purchase_date ? `<span style="font-size:0.68rem;color:var(--ink-light);margin-left:6px;">購入：${s.purchase_date}</span>` : ''}
+    <div class="shinai-item">
+      <div onclick="showDetail('${s.id}')">
+        <div class="shinai-id">${s.id}</div>
+        <div class="shinai-meta">${s.meigara || '銘柄未設定'}　${s.length ? s.length + '寸' : ''}　${s.weight_after ? s.weight_after + 'g' : ''}</div>
+        <div class="shinai-tags">
+          <span class="status-badge status-${s.status || '未使用'}">${s.status || '未使用'}</span>
+          ${s.purchase_date ? `<span style="font-size:0.68rem;color:var(--ink-light);margin-left:6px;">購入：${s.purchase_date}</span>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;cursor:pointer;">
+          <input type="checkbox" ${s.is_kiteinai ? 'checked' : ''} 
+            onchange="toggleFlag('${s.id}','is_kiteinai',this.checked)"
+            style="accent-color:var(--accent);">
+          規定内
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;cursor:pointer;">
+          <input type="checkbox" ${s.is_shiaiyo ? 'checked' : ''} 
+            onchange="toggleFlag('${s.id}','is_shiaiyo',this.checked)"
+            style="accent-color:var(--accent);">
+          試合用
+        </label>
       </div>
     </div>
   `).join('');
