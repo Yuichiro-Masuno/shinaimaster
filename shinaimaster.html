@@ -31,6 +31,9 @@ body {
   min-height: 100vh;
 }
 
+header, .tabs, main { visibility: hidden; }
+body.authed header, body.authed .tabs, body.authed main { visibility: visible; }
+
 header {
   background: var(--ink);
   padding: 16px 20px;
@@ -597,6 +600,23 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ─── AUTH GUARD ───
+const PORTAL_URL = 'https://yuichiro-masuno.github.io/kendo-nikki/kendo-nikki.html';
+const APP_KEY = 'shinaimaster';
+
+async function requireAuth() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      window.location.replace(`${PORTAL_URL}?redirect=${APP_KEY}`);
+      return false;
+    }
+    return true;
+  } catch(e) {
+    return true; // 認証確認に失敗した場合はガードなしで通す（保険）
+  }
+}
+
 // ─── STATE ───
 let shinais = [];
 let editingId = null;
@@ -938,7 +958,12 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-(async () => { await init(); })();
+(async () => {
+  const authed = await requireAuth();
+  if (!authed) return;
+  document.body.classList.add('authed');
+  await init();
+})();
 </script>
 </body>
 </html>
